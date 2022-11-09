@@ -7,7 +7,8 @@
 
 import Foundation
 
-protocol Storagable {
+public protocol Storagable {
+    init()
     func save<T: Encodable>(_ object: T, key: String) throws
     func load<T: Decodable>(key: String) throws -> T?
     func remove(key: String) throws

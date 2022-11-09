@@ -32,3 +32,8 @@ public extension RequestConvertible {
     var headers: [NetworkHeader]? { nil }
     var authorizationStrategy: AuthorizationStrategy? { .token }
 }
+
+public enum AuthorizationStrategy {
+    case token
+}
+

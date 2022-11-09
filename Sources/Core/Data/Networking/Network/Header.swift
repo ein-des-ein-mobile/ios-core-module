@@ -12,6 +12,12 @@ public struct NetworkHeader {
     let value: String
 }
 
+extension URLRequest {
+    public mutating func add(header: NetworkHeader) {
+        setValue(header.value, forHTTPHeaderField: header.key)
+    }
+}
+
 extension NetworkHeader {
 
     /// Returns a `Bearer` `Authorization` header using the `bearerToken` provided

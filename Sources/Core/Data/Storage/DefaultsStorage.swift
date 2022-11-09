@@ -8,21 +8,23 @@ import Foundation
 
 // MARK: - DefaultsStorage
 
-final class DefaultsStorage: Storagable {
+public final class DefaultsStorage: Storagable {
+    
+    public init() {}
 
-    func save<T>(_ object: T, key: String) throws where T: Encodable {
+    public func save<T>(_ object: T, key: String) throws where T: Encodable {
         let data = try JSONEncoder().encode(object)
         UserDefaults.standard.set(data, forKey: key)
     }
 
-    func load<T: Decodable>(key: String) throws -> T? {
+    public func load<T: Decodable>(key: String) throws -> T? {
         guard let data = UserDefaults.standard.value(forKey: key) as? Data else {
             return nil
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    func remove(key: String) throws {
+    public func remove(key: String) throws {
         UserDefaults.standard.removeObject(forKey: key)
     }
 }
