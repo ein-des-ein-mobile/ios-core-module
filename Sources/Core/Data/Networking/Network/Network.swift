@@ -59,8 +59,16 @@ extension Network: Networking {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             try (response as? HTTPURLResponse)?.validate()
-            return NetworkResponse(data: data, response: response)
+            let networkResponse = NetworkResponse(data: data, response: response)
+            didReceive(.success(networkResponse),
+                       data: data,
+                       request: request,
+                       target: target
+            )
+            return networkResponse
         } catch {
+            didReceive(.failure(error), data: nil, request: request, target: target)
+            
             if try await should(retry: target, dueTo: error) {
                 return try await data(for: target)
             } else {
@@ -89,6 +97,18 @@ extension Network {
     private func prepare(_ request: URLRequest,
                          target: RequestConvertible) throws -> URLRequest {
         return try plugins.reduce(request) { try $1.prepare($0, target: target) }
+    }
+    
+    private func didReceive(_ result: Result<NetworkResponse, Error>,
+                            data: Data?,
+                            request: URLRequest,
+                            target: RequestConvertible) {
+        plugins.forEach {
+            $0.didReceive(result,
+                          data: data,
+                          request: request,
+                          target: target)
+        }
     }
     
     private func should(retry target: RequestConvertible,
