@@ -58,14 +58,24 @@ extension Network: Networking {
         
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            try (response as? HTTPURLResponse)?.validate()
             let networkResponse = NetworkResponse(data: data, response: response)
-            didReceive(.success(networkResponse),
-                       data: data,
-                       request: request,
-                       target: target
-            )
-            return networkResponse
+            
+            do {
+                try (response as? HTTPURLResponse)?.validate()
+                didReceive(.success(networkResponse),
+                           data: data,
+                           request: request,
+                           target: target
+                )
+                return networkResponse
+            } catch {
+                didReceive(.failure(error),
+                           data: data,
+                           request: request,
+                           target: target
+                )
+                throw error
+            }
         } catch {
             didReceive(.failure(error), data: nil, request: request, target: target)
             
