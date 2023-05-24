@@ -11,17 +11,16 @@ public enum APIError: LocalizedError {
     case deallocated(Any)
     case notImplemented(Any)
     case noData(Any)
-    case statusCode(Int)
+    case statusCode(Int, data: Data, response: URLResponse)
     case sessionRequired
-    case urlError(URLError)
     case underlying(Error)
 
     public var statusCode: Int? {
-        if case let .statusCode(code) = self {
+        if case let .statusCode(code, _, _) = self {
             return code
         }
 
-        return 0
+        return nil
     }
 
     public var errorDescription: String? {
@@ -32,12 +31,16 @@ public enum APIError: LocalizedError {
             return "No data of \(value)"
         case .notImplemented(let value):
             return "Method \(value) is not implemented"
-        case .statusCode(let int):
-            return "Status code was \(int), but expected 2xx"
+        case .statusCode(let int, let data, let response):
+            return """
+            Status code was \(int),
+            ===================================
+            \(String(describing: response.url))
+            ===================================
+            \(String(describing: String(data: data, encoding: .utf8)))
+            """
         case .sessionRequired:
             return "The session is required"
-        case .urlError(let uRLError):
-            return uRLError.localizedDescription
         case .underlying(let error):
             return error.localizedDescription
         }

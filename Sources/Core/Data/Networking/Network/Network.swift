@@ -61,7 +61,7 @@ extension Network: Networking {
             let networkResponse = NetworkResponse(data: data, response: response)
             
             do {
-                try (response as? HTTPURLResponse)?.validate()
+                try (response as? HTTPURLResponse)?.validate(data: data)
                 didReceive(.success(networkResponse),
                            data: data,
                            request: request,
