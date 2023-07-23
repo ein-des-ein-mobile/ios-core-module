@@ -7,7 +7,7 @@
 
 import CoreData
 
-extension NSManagedObject {
+public extension NSManagedObject {
     static var entityName: String {
         NSStringFromClass(self)
             .components(separatedBy: ".")

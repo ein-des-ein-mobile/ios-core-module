@@ -7,7 +7,7 @@
 
 import CoreData
 
-extension Persistable {
+public extension Persistable {
     func persist<D>(to database: D) async throws -> ManagedObject
     where D: DatabaseProvider,
           ManagedObject: NSManagedObject,
@@ -17,7 +17,7 @@ extension Persistable {
     
 }
 
-extension PersistableCollection {
+public extension PersistableCollection {
     func persist<D>(to database: D) async throws -> [Item.ManagedObject]
     where D: DatabaseProvider,
           Item.ManagedObject: NSManagedObject,
@@ -27,7 +27,7 @@ extension PersistableCollection {
     }
 }
 
-extension NSManagedObject {
+public extension NSManagedObject {
     func tryMap<T, D>(to type: T.Type, database: D) async throws -> T?
     where D: DatabaseProvider,
           T: DatabaseRepresentable,
@@ -43,7 +43,7 @@ extension NSManagedObject {
     }
 }
 
-extension Array where Element: NSManagedObject {
+public extension Array where Element: NSManagedObject {
     func tryMap<T, D>(to type: T.Type, database: D) async throws -> [T]
     where D: DatabaseProvider,
           T: DatabaseRepresentable,

@@ -15,7 +15,7 @@
 import Foundation
 import CoreData
 
-final class CoreDataDatabase {
+public final class CoreDataDatabase {
     
     private enum C {
         enum PersistentContainer {
@@ -45,7 +45,7 @@ final class CoreDataDatabase {
     
     // MARK: - Initialization
     
-    init() {
+    public init() {
         // loading is synchronius
         load { error in
             error.map { print("Database error: \($0)") }
@@ -54,7 +54,7 @@ final class CoreDataDatabase {
     
     // MARK: - Functions
     
-    func load(_ completion: @escaping (Error?) -> Void) {
+    public func load(_ completion: @escaping (Error?) -> Void) {
         persistentContainer.loadPersistentStores { _, error in
             completion(error)
         }
@@ -62,7 +62,7 @@ final class CoreDataDatabase {
     
     // MARK: Perform
     
-    func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
+    public func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
         performQueue.async { [backgroundContext] in
             backgroundContext.performAndWait {
                 do {
@@ -81,7 +81,7 @@ final class CoreDataDatabase {
 
 extension CoreDataDatabase: DatabaseProvider {
     
-    typealias DB = CoreDataDatabase
+    public typealias DB = CoreDataDatabase
     
     private func performWrite<Output>( _ action: @escaping (DB) async throws -> Output,
                                        result: @escaping (Result<Output, Error>) -> Void) {
@@ -107,7 +107,7 @@ extension CoreDataDatabase: DatabaseProvider {
         }
     }
     
-    func perform<Output>(_ action: @escaping (DB) async throws -> Output) async throws -> Output {
+    public func perform<Output>(_ action: @escaping (DB) async throws -> Output) async throws -> Output {
         try await withCheckedThrowingContinuation { [weak self] continuation in
             guard let self = self else {
                 continuation.resume(with: .failure(DatabaseError.dealocated(CoreDataDatabase.self)))
@@ -120,13 +120,13 @@ extension CoreDataDatabase: DatabaseProvider {
         }
     }
     
-    func erase() async throws {
+    public func erase() async throws {
         
     }
 }
 
 extension CoreDataDatabase: Database {
-    func fetchOrCreate<T, Key>(_ type: T.Type, forPrimaryKey key: Key?) async throws -> T.ManagedObject where T : Persistable {
+    public func fetchOrCreate<T, Key>(_ type: T.Type, forPrimaryKey key: Key?) async throws -> T.ManagedObject where T : Persistable {
         guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(type.ManagedObject)
         }
