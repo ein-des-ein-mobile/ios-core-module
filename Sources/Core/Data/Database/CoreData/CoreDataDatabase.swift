@@ -17,17 +17,11 @@ import CoreData
 
 public final class CoreDataDatabase {
     
-    private enum C {
-        enum PersistentContainer {
-            static let name = "iOS-Module-CoreData"
-        }
-    }
-    
     // MARK: - Properties
     // concurrent queue for execution performAndWait on reading
     private let performQueue = DispatchQueue(label: "Database performQueue", qos: .userInitiated, attributes: .concurrent)
     
-    private lazy var persistentContainer = NSPersistentContainer(name: C.PersistentContainer.name)
+    private lazy var persistentContainer = NSPersistentContainer(name: persistentContainerName)
     
     private lazy var viewContext: NSManagedObjectContext = {
         with(persistentContainer.viewContext) {
@@ -43,12 +37,20 @@ public final class CoreDataDatabase {
         }
     }()
     
+    let persistentContainerName: String
+    let logger: CoreLogging
+    
     // MARK: - Initialization
     
-    public init() {
+    public init(
+        persistentContainerName: String,
+        logger: CoreLogging = CoreLogger()
+    ) {
+        self.persistentContainerName = persistentContainerName
+        self.logger = logger
         // loading is synchronius
         load { error in
-            error.map { print("Database error: \($0)") }
+            error.map { logger.error("Database load error", $0)}
         }
     }
     
@@ -63,7 +65,7 @@ public final class CoreDataDatabase {
     // MARK: Perform
     
     public func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
-        performQueue.async { [backgroundContext] in
+        performQueue.async { [backgroundContext, logger] in
             backgroundContext.performAndWait {
                 do {
                     try block(backgroundContext)
@@ -72,7 +74,7 @@ public final class CoreDataDatabase {
                         try backgroundContext.save()
                     }
                 } catch {
-                    print("Database perform error: \(error)")
+                    logger.error("Database perform error", error)
                 }
             }
         }
