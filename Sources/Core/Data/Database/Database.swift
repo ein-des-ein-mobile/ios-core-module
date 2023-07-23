@@ -12,6 +12,7 @@ public enum DatabaseError: LocalizedError {
     case typeCasting(Any)
     case notFound(type: Any, id: Any)
     case dealocated(Any)
+    case underlying(Error)
 }
 
 public protocol Database {

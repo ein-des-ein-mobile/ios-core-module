@@ -12,33 +12,35 @@
 /// not ready
 ///
 
-/*
 import Foundation
 import CoreData
 
 final class CoreDataDatabase {
     
-    private enum PersistentContainer {
-        static let name = "CoreData"
+    private enum C {
+        enum PersistentContainer {
+            static let name = "iOS-Module-CoreData"
+        }
     }
+    
     // MARK: - Properties
     // concurrent queue for execution performAndWait on reading
     private let performQueue = DispatchQueue(label: "Database performQueue", qos: .userInitiated, attributes: .concurrent)
     
-    private lazy var persistentContainer: NSPersistentContainer = NSPersistentContainer(name: PersistentContainer.name)
+    private lazy var persistentContainer = NSPersistentContainer(name: C.PersistentContainer.name)
     
     private lazy var viewContext: NSManagedObjectContext = {
-        let viewContext = persistentContainer.viewContext
-        viewContext.automaticallyMergesChangesFromParent = true
-        viewContext.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
-        return viewContext
+        with(persistentContainer.viewContext) {
+            $0.automaticallyMergesChangesFromParent = true
+            $0.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
+        }
     }()
     
     private lazy var backgroundContext: NSManagedObjectContext = {
-        let backgroundContext = persistentContainer.newBackgroundContext()
-        backgroundContext.automaticallyMergesChangesFromParent = true
-        backgroundContext.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
-        return backgroundContext
+        with(persistentContainer.newBackgroundContext()) {
+            $0.automaticallyMergesChangesFromParent = true
+            $0.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
+        }
     }()
     
     // MARK: - Initialization
@@ -61,26 +63,16 @@ final class CoreDataDatabase {
     // MARK: Perform
     
     func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
-        performQueue.async { [unowned self] in
-            self.backgroundContext.performAndWait {
+        performQueue.async { [backgroundContext] in
+            backgroundContext.performAndWait {
                 do {
-                    try block(self.backgroundContext)
+                    try block(backgroundContext)
+                    
+                    if backgroundContext.hasChanges {
+                        try backgroundContext.save()
+                    }
                 } catch {
                     print("Database perform error: \(error)")
-                }
-            }
-        }
-    }
-    
-    private func performWrite(block: @escaping (NSManagedObjectContext) -> Void) {
-        backgroundContext.performAndWait { [backgroundContext] in
-            block(backgroundContext)
-            
-            if backgroundContext.hasChanges {
-                do {
-                    try backgroundContext.save()
-                } catch {
-                    print("Database performWrite error: \(error)")
                 }
             }
         }
@@ -91,19 +83,39 @@ extension CoreDataDatabase: DatabaseProvider {
     
     typealias DB = CoreDataDatabase
     
-    func perform<Output>(_ action: @escaping (CoreDataDatabase) throws -> Output) async throws -> Output {
+    private func performWrite<Output>( _ action: @escaping (DB) async throws -> Output,
+                                       result: @escaping (Result<Output, Error>) -> Void) {
+        perform { moc in
+            let semaphore = DispatchSemaphore(value: 0)
+            
+            Task { [weak self] in
+                defer { semaphore.signal() }
+                
+                guard let self = self else {
+                    result(.failure(DatabaseError.dealocated(CoreDataDatabase.self)))
+                    return
+                }
+                
+                do {
+                    result(.success(try await action(self)))
+                } catch {
+                    result(.failure(DatabaseError.underlying(error)))
+                }
+            }
+            
+            semaphore.wait()
+        }
+    }
+    
+    func perform<Output>(_ action: @escaping (DB) async throws -> Output) async throws -> Output {
         try await withCheckedThrowingContinuation { [weak self] continuation in
             guard let self = self else {
                 continuation.resume(with: .failure(DatabaseError.dealocated(CoreDataDatabase.self)))
                 return
             }
             
-            self.perform { moc in
-                do {
-                    try continuation.resume(with: .success(action(self)))
-                } catch {
-                    continuation.resume(with: .failure(error))
-                }
+            self.performWrite(action) { result in
+                continuation.resume(with: result)
             }
         }
     }
@@ -112,7 +124,6 @@ extension CoreDataDatabase: DatabaseProvider {
         
     }
 }
-
 
 extension CoreDataDatabase: Database {
     func fetchOrCreate<T, Key>(_ type: T.Type, forPrimaryKey key: Key?) async throws -> T.ManagedObject where T : Persistable {
@@ -131,8 +142,8 @@ extension CoreDataDatabase: Database {
                     let result = try moc.fetch(ObjectType.fetchRequest())
                     if result.isEmpty {
                         let object = ObjectType.init()
+                        object.setCustomValue(key, for: "id")
                         moc.insert(object)
-                        try moc.save()
                         continuation.resume(with: .success(object as! T.ManagedObject))
                     } else {
                         continuation.resume(with: .success(result.first! as! T.ManagedObject))
@@ -144,59 +155,3 @@ extension CoreDataDatabase: Database {
         }
     }
 }
-
-
-extension Persistable {
-    func persist<D>(to database: D) async throws -> ManagedObject
-    where D: DatabaseProvider,
-          ManagedObject: NSManagedObject,
-          Context == Void {
-              try await database.persist(self)
-          }
-    
-}
-
-extension PersistableCollection {
-    func persist<D>(to database: D) async throws -> [Item.ManagedObject]
-    where D: DatabaseProvider,
-          Item.ManagedObject: NSManagedObject,
-          Item.Context == Void
-    {
-        try await database.persist(self)
-    }
-}
-
-extension NSManagedObject {
-    func tryMap<T, D>(to type: T.Type, database: D) async throws -> T?
-    where D: DatabaseProvider,
-          T: DatabaseRepresentable,
-          T.ManagedObject: NSManagedObject,
-          T.Context == Void
-    {
-        try await database.perform { [unowned self] _ -> T? in
-            guard !self.isFault else {
-                return nil
-            }
-            return try T(self as! T.ManagedObject)
-        }
-    }
-}
-
-extension Array where Element: NSManagedObject {
-    func tryMap<T, D>(to type: T.Type, database: D) async throws -> [T]
-    where D: DatabaseProvider,
-          T: DatabaseRepresentable,
-          T.ManagedObject: NSManagedObject,
-          T.Context == Void
-    {
-        try await database.perform { _ -> [T] in
-            try self.compactMap {
-                guard !$0.isFault else {
-                    return nil
-                }
-                return try T($0 as! T.ManagedObject)
-            }
-        }
-    }
-}
-*/
