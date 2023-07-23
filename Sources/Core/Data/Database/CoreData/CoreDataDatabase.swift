@@ -144,7 +144,9 @@ extension CoreDataDatabase: Database {
                     let result = try moc.fetch(ObjectType.fetchRequest())
                     if result.isEmpty {
                         let object = ObjectType.init()
-                        object.setCustomValue(key, for: "id")
+                        if let key = key as? String {
+                            object.setCustomValue(key, for: key)
+                        }
                         moc.insert(object)
                         continuation.resume(with: .success(object as! T.ManagedObject))
                     } else {
