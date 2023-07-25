@@ -37,10 +37,12 @@ public protocol CoreLogging {
 }
 
 public struct CoreLogger: CoreLogging {
+   
+    private let logger: Logger
     
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: loggerCategory)
-    
-    public init() {}
+    public init(category: String? = nil) {
+        self.logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: category ?? loggerCategory)
+    }
     
     public func log(_ str: String) {
         logger.debug("\(str)")

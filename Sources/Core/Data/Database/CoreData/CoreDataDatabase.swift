@@ -44,7 +44,7 @@ public final class CoreDataDatabase {
     
     public init(
         persistentContainerName: String,
-        logger: CoreLogging = CoreLogger()
+        logger: CoreLogging = CoreLogger(category: "Core-Data")
     ) {
         self.persistentContainerName = persistentContainerName
         self.logger = logger
