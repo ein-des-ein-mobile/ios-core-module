@@ -7,15 +7,16 @@ import Foundation
 public protocol Persistable {
     associatedtype ManagedObject
     associatedtype Context
-    var primaryKey: Any { get }
+    var primaryKey: PrimaryKey { get }
     func update(_ object: ManagedObject, context: Context) throws
 }
 
 public extension Persistable
     where
-    Self: Identifiable
+    Self: Identifiable,
+    Self.ID: Identity
 {
-    var primaryKey: Any { return id }
+    var primaryKey: PrimaryKey { IDPrimaryKey(id: id) }
 }
 
 public extension Persistable where Context == Void {

@@ -18,8 +18,6 @@ import CoreData
 public final class CoreDataDatabase {
     
     // MARK: - Properties
-    // concurrent queue for execution performAndWait on reading
-    private let performQueue = DispatchQueue(label: "Database performQueue", qos: .userInitiated, attributes: .concurrent)
     
     private lazy var persistentContainer = NSPersistentContainer(name: persistentContainerName)
     
@@ -65,17 +63,15 @@ public final class CoreDataDatabase {
     // MARK: Perform
     
     public func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
-        performQueue.async { [backgroundContext, logger] in
-            backgroundContext.performAndWait {
-                do {
-                    try block(backgroundContext)
-                    
-                    if backgroundContext.hasChanges {
-                        try backgroundContext.save()
-                    }
-                } catch {
-                    logger.error("Database perform error", error)
+        backgroundContext.performAndWait {
+            do {
+                try block(backgroundContext)
+                
+                if backgroundContext.hasChanges {
+                    try backgroundContext.save()
                 }
+            } catch {
+                logger.error("Database perform error", error)
             }
         }
     }
@@ -85,30 +81,6 @@ extension CoreDataDatabase: DatabaseProvider {
     
     public typealias DB = CoreDataDatabase
     
-    private func performWrite<Output>( _ action: @escaping (DB) async throws -> Output,
-                                       result: @escaping (Result<Output, Error>) -> Void) {
-        perform { moc in
-            let semaphore = DispatchSemaphore(value: 0)
-            
-            Task { [weak self] in
-                defer { semaphore.signal() }
-                
-                guard let self = self else {
-                    result(.failure(DatabaseError.dealocated(CoreDataDatabase.self)))
-                    return
-                }
-                
-                do {
-                    result(.success(try await action(self)))
-                } catch {
-                    result(.failure(DatabaseError.underlying(error)))
-                }
-            }
-            
-            semaphore.wait()
-        }
-    }
-    
     public func perform<Output>(_ action: @escaping (DB) async throws -> Output) async throws -> Output {
         try await withCheckedThrowingContinuation { [weak self] continuation in
             guard let self = self else {
@@ -116,7 +88,9 @@ extension CoreDataDatabase: DatabaseProvider {
                 return
             }
             
-            self.performWrite(action) { result in
+            execute {
+                try await action(self)
+            } callback: { result in
                 continuation.resume(with: result)
             }
         }
@@ -128,7 +102,7 @@ extension CoreDataDatabase: DatabaseProvider {
 }
 
 extension CoreDataDatabase: Database {
-    public func fetchOrCreate<T, Key>(_ type: T.Type, forPrimaryKey key: Key?) async throws -> T.ManagedObject where T : Persistable {
+    public func fetchOrCreate<T>(_ type: T.Type, forPrimaryKey key: PrimaryKey?) async throws -> T.ManagedObject where T : Persistable {
         guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(type.ManagedObject)
         }
@@ -141,11 +115,11 @@ extension CoreDataDatabase: Database {
             
             self.perform { moc in
                 do {
-                    let result = try moc.fetch(ObjectType.fetchRequest())
+                    let result = try moc.fetch(ObjectType.createFetchRequest())
                     if result.isEmpty {
-                        let object = ObjectType.init()
-                        if let key = key as? String {
-                            object.setCustomValue(key, for: key)
+                        let object = ObjectType.init(context: moc)
+                        if let key = key {
+                            object.setCustomValue(key.value, for: key.key)
                         }
                         moc.insert(object)
                         continuation.resume(with: .success(object as! T.ManagedObject))

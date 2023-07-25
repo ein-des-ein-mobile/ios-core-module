@@ -20,8 +20,7 @@ public protocol Database {
     func createOrUpdate<T: Persistable>(from object: T, context: T.Context) async throws
     -> T.ManagedObject
 
-    func fetchOrCreate<T: Persistable, Key>(_ type: T.Type,
-                                            forPrimaryKey key: Key?) async throws
+    func fetchOrCreate<T: Persistable>(_ type: T.Type, forPrimaryKey key: PrimaryKey?) async throws
     -> T.ManagedObject
 }
 

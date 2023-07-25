@@ -11,7 +11,7 @@ public protocol DatabaseProvider {
     associatedtype DB: Database
     
     func perform<Output>(_ action: @escaping (DB) async throws -> Output) async throws -> Output
-
+    
     func erase() async throws
 }
 
@@ -31,6 +31,28 @@ public extension DatabaseProvider {
     T.Context == Void
     {
         try await persist(value, context: ())
+    }
+}
+
+public extension DatabaseProvider {
+    func persistAndWait<T: Persistable>(
+        _ value: T,
+        context: T.Context,
+        callback: ((Result<T.ManagedObject, Error>) -> Void)? = nil
+    ) {
+        execute(operation: {
+            try await persist(value, context: context)
+        }, callback: callback)
+    }
+    
+    func persistAndWait<T: Persistable>(
+        _ value: T,
+        callback: ((Result<T.ManagedObject, Error>) -> Void)? = nil
+    )
+    where
+    T.Context == Void
+    {
+       persistAndWait(value, context: (), callback: callback)
     }
 }
 
