@@ -19,6 +19,28 @@ public extension Persistable
     var primaryKey: PrimaryKey { IDPrimaryKey(id: id) }
 }
 
+public extension Persistable
+    where
+    Self: Identifiable,
+    Self.ID: Identity,
+    Self.ID.Value == String
+{
+   static func primaryKey(for id: String) -> PrimaryKey {
+        IDPrimaryKey(id: Self.ID(value: id))
+   }
+}
+
+public extension Persistable
+    where
+    Self: Identifiable,
+    Self.ID: Identity,
+    Self.ID.Value == UInt64
+{
+   static func primaryKey(for id: UInt64) -> PrimaryKey {
+        IDPrimaryKey(id: Self.ID(value: id))
+   }
+}
+
 public extension Persistable where Context == Void {
     func update(_ object: ManagedObject) throws {
         try update(object, context: ())

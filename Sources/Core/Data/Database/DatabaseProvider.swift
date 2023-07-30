@@ -54,6 +54,15 @@ public extension DatabaseProvider {
     {
        persistAndWait(value, context: (), callback: callback)
     }
+    
+    func performAndWait<Output>(
+        _ action: @escaping (DB) async throws -> Output,
+        callback: ((Result<Output, Error>) -> Void)? = nil
+    ) {
+        execute(operation: {
+            try await perform(action)
+        }, callback: callback)
+    }
 }
 
 

@@ -28,4 +28,6 @@ public protocol Identity: Hashable, Codable {
     associatedtype Value: Hashable, Codable
     
     var value: Value { get }
+    
+    init(value: Value)
 }
