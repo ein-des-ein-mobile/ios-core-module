@@ -24,6 +24,16 @@ public extension DatabaseProvider {
             try await database.createOrUpdate(from: value, context: context)
         }
     }
+    
+    func fetchOrCreate<T: Persistable & DatabaseRepresentable>(
+        _ type: T.Type,
+        forPrimaryKey key: PrimaryKey?,
+        context: T.Context
+    ) async throws -> T {
+        try await perform { database in
+            try T(await database.fetchOrCreate(type, forPrimaryKey: key), context: context)
+        }
+    }
 
     /// Void Context
     func persist<T: Persistable>(_ value: T) async throws -> T.ManagedObject
@@ -31,6 +41,15 @@ public extension DatabaseProvider {
     T.Context == Void
     {
         try await persist(value, context: ())
+    }
+    
+    func fetchOrCreate<T: Persistable & DatabaseRepresentable>(
+        _ type: T.Type,
+        forPrimaryKey key: PrimaryKey?
+    ) async throws -> T where T.Context == Void {
+        try await perform { database in
+            try T(await database.fetchOrCreate(type, forPrimaryKey: key))
+        }
     }
 }
 
@@ -43,6 +62,16 @@ public extension DatabaseProvider {
         execute(operation: {
             try await persist(value, context: context)
         }, callback: callback)
+    }
+    
+    func fetchOrCreateAndWait<T: Persistable & DatabaseRepresentable>(
+        _ type: T.Type,
+        forPrimaryKey key: PrimaryKey?,
+        context: T.Context
+    ) throws -> T {
+        try execute {
+            try await fetchOrCreate(type, forPrimaryKey: key, context: context)
+        }
     }
     
     func persistAndWait<T: Persistable>(
@@ -62,6 +91,15 @@ public extension DatabaseProvider {
         execute(operation: {
             try await perform(action)
         }, callback: callback)
+    }
+    
+    func fetchOrCreateAndWait<T: Persistable & DatabaseRepresentable>(
+        _ type: T.Type,
+        forPrimaryKey key: PrimaryKey?
+    ) throws -> T where T.Context == Void {
+        try execute {
+            try await fetchOrCreate(type, forPrimaryKey: key)
+        }
     }
 }
 
