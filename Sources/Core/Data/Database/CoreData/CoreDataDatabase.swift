@@ -102,7 +102,7 @@ extension CoreDataDatabase: DatabaseProvider {
 }
 
 extension CoreDataDatabase: Database {
-    public func fetchOrCreate<T>(_ type: T.Type, forPrimaryKey key: PrimaryKey?) async throws -> T.ManagedObject where T : Persistable {
+    public func fetch<T>(_ type: T.Type) async throws -> [T.ManagedObject] where T : Persistable {
         guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(type.ManagedObject)
         }
@@ -116,11 +116,32 @@ extension CoreDataDatabase: Database {
             self.perform { moc in
                 do {
                     let result = try moc.fetch(ObjectType.createFetchRequest())
+                    continuation.resume(with: .success(result as! [T.ManagedObject]))
+                } catch {
+                    continuation.resume(with: .failure(error))
+                }
+            }
+        }
+    }
+    
+    public func fetchOrCreate<T>(_ type: T.Type, forPrimaryKey key: PrimaryKey) async throws -> T.ManagedObject where T : Persistable {
+        guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
+            throw DatabaseError.typeCasting(type.ManagedObject)
+        }
+        
+        return try await withCheckedThrowingContinuation { [weak self] continuation in
+            guard let self = self else {
+                continuation.resume(with: .failure(DatabaseError.dealocated(CoreDataDatabase.self)))
+                return
+            }
+            
+            self.perform { moc in
+                do {
+                    let prdicate = NSPredicate(format: "\(key.key) == %@", "\(key.value)")
+                    let result = try moc.fetch(ObjectType.createFetchRequest(predicate: prdicate))
                     if result.isEmpty {
                         let object = ObjectType.init(context: moc)
-                        if let key = key {
-                            object.setCustomValue(key.value, for: key.key)
-                        }
+                        object.setCustomValue(key.value, for: key.key)
                         moc.insert(object)
                         continuation.resume(with: .success(object as! T.ManagedObject))
                     } else {

@@ -20,8 +20,10 @@ public protocol Database {
     func createOrUpdate<T: Persistable>(from object: T, context: T.Context) async throws
     -> T.ManagedObject
 
-    func fetchOrCreate<T: Persistable>(_ type: T.Type, forPrimaryKey key: PrimaryKey?) async throws
+    func fetchOrCreate<T: Persistable>(_ type: T.Type, forPrimaryKey key: PrimaryKey) async throws
     -> T.ManagedObject
+    
+    func fetch<T: Persistable>(_ type: T.Type) async throws -> [T.ManagedObject]
 }
 
 
@@ -43,5 +45,17 @@ public extension Database {
         let managedObject = try await fetchOrCreate(T.self, forPrimaryKey: object.primaryKey)
         try object.update(managedObject, context: context)
         return managedObject
+    }
+    
+    
+    func createOrUpdate<T: Persistable>(from objects: [T]) async throws
+    -> [T.ManagedObject] where T.Context == Void
+    {
+        try await createOrUpdate(from: objects, context: ())
+    }
+    
+    func createOrUpdate<T: Persistable>(from object: T) async throws -> T.ManagedObject where T.Context == Void
+    {
+        try await createOrUpdate(from: object, context: ())
     }
 }
