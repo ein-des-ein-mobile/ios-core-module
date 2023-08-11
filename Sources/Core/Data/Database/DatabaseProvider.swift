@@ -27,11 +27,11 @@ public extension DatabaseProvider {
     
     func fetchOrCreate<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        forPrimaryKey key: PrimaryKey,
+        for key: PrimaryKey,
         context: T.Context
     ) async throws -> T {
         try await perform { database in
-            try T(await database.fetchOrCreate(type, forPrimaryKey: key), context: context)
+            try T(await database.fetchOrCreate(type, for: key), context: context)
         }
     }
     
@@ -41,6 +41,16 @@ public extension DatabaseProvider {
     ) async throws -> [T] {
         try await perform { database in
             try await database.fetch(type).map { try T($0, context: context) }
+        }
+    }
+    
+    func fetch<T: Persistable & DatabaseRepresentable>(
+        _ type: T.Type,
+        for key: PrimaryKey,
+        context: T.Context
+    ) async throws -> T? {
+        try await perform { database in
+            try await database.fetch(type, for: key).map { try T($0, context: context) }
         }
     }
 }
@@ -58,11 +68,11 @@ public extension DatabaseProvider {
     
     func fetchOrCreateAndWait<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        forPrimaryKey key: PrimaryKey,
+        for key: PrimaryKey,
         context: T.Context
     ) throws -> T {
         try execute {
-            try await fetchOrCreate(type, forPrimaryKey: key, context: context)
+            try await fetchOrCreate(type, for: key, context: context)
         }
     }
     
@@ -72,6 +82,16 @@ public extension DatabaseProvider {
     ) throws -> [T] {
         try execute {
             try await fetch(type, context: context)
+        }
+    }
+    
+    func fetchWait<T: Persistable & DatabaseRepresentable>(
+        _ type: T.Type,
+        for key: PrimaryKey,
+        context: T.Context
+    ) throws -> T? {
+        try execute {
+            try await fetch(type, for: key, context: context)
         }
     }
     
@@ -125,11 +145,11 @@ public extension DatabaseProvider {
     
     func fetchOrCreateAndWait<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        forPrimaryKey key: PrimaryKey
+        for key: PrimaryKey
     ) throws -> T
     where T.Context == Void
     {
-        try fetchOrCreateAndWait(type, forPrimaryKey: key, context: ())
+        try fetchOrCreateAndWait(type, for: key, context: ())
     }
     
     func persist<T: Persistable>(_ value: T) async throws -> T.ManagedObject
@@ -140,16 +160,25 @@ public extension DatabaseProvider {
     
     func fetchOrCreate<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        forPrimaryKey key: PrimaryKey
+        for key: PrimaryKey
     ) async throws -> T
     where T.Context == Void
     {
-        try await fetchOrCreate(type, forPrimaryKey: key, context: ())
+        try await fetchOrCreate(type, for: key, context: ())
     }
     
     func fetch<T: Persistable & DatabaseRepresentable>(_ type: T.Type) async throws -> [T]
     where T.Context == Void
     {
         try await fetch(type, context: ())
+    }
+    
+    func fetch<T: Persistable & DatabaseRepresentable>(
+        _ type: T.Type,
+        for key: PrimaryKey
+    ) async throws -> T?
+    where T.Context == Void
+    {
+        try await fetch(type, for: key, context: ())
     }
 }

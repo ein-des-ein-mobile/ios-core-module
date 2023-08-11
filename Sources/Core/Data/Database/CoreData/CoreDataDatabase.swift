@@ -102,6 +102,29 @@ extension CoreDataDatabase: DatabaseProvider {
 }
 
 extension CoreDataDatabase: Database {
+    public func fetch<T>(_ type: T.Type, for key: PrimaryKey) async throws -> T.ManagedObject? where T : Persistable {
+        guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
+            throw DatabaseError.typeCasting(type.ManagedObject)
+        }
+        
+        return try await withCheckedThrowingContinuation { [weak self] continuation in
+            guard let self = self else {
+                continuation.resume(with: .failure(DatabaseError.dealocated(CoreDataDatabase.self)))
+                return
+            }
+            
+            self.perform { moc in
+                do {
+                    let prdicate = NSPredicate(format: "\(key.key) == %@", "\(key.value)")
+                    let result = try moc.fetch(ObjectType.createFetchRequest(predicate: prdicate))
+                    continuation.resume(with: .success(result.first as? T.ManagedObject))
+                } catch {
+                    continuation.resume(with: .failure(error))
+                }
+            }
+        }
+    }
+    
     public func fetch<T>(_ type: T.Type) async throws -> [T.ManagedObject] where T : Persistable {
         guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(type.ManagedObject)
@@ -124,7 +147,7 @@ extension CoreDataDatabase: Database {
         }
     }
     
-    public func fetchOrCreate<T>(_ type: T.Type, forPrimaryKey key: PrimaryKey) async throws -> T.ManagedObject where T : Persistable {
+    public func fetchOrCreate<T>(_ type: T.Type, for key: PrimaryKey) async throws -> T.ManagedObject where T : Persistable {
         guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(type.ManagedObject)
         }
