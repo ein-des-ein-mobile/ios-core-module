@@ -32,14 +32,14 @@ extension LoggerPlugin: NetworkPlugin {
         switch result {
             
         case .success(let response):
-            let value = String(data: response.data, encoding: .utf8) ?? ""
+            let value = response.data.prettyPrintedJSONString ?? ""
             LoggerPlugin.os_logger.debug("\(value)")
             
         case .failure(let error):
             LoggerPlugin.os_logger.debug("\(error.localizedDescription)")
             
             if let data = data {
-                let value = String(data: data, encoding: .utf8) ?? ""
+                let value = data.prettyPrintedJSONString ?? ""
                 LoggerPlugin.os_logger.debug("\(value)")
             }
         }
