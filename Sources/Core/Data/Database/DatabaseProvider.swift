@@ -85,16 +85,6 @@ public extension DatabaseProvider {
         }
     }
     
-    func fetchWait<T: Persistable & DatabaseRepresentable>(
-        _ type: T.Type,
-        for key: PrimaryKey,
-        context: T.Context
-    ) throws -> T? {
-        try execute {
-            try await fetch(type, for: key, context: context)
-        }
-    }
-    
     func performAndWait<Output>(
         _ action: @escaping (DB) async throws -> Output,
         callback: ((Result<Output, Error>) -> Void)? = nil
