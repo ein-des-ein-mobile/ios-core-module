@@ -102,7 +102,7 @@ extension CoreDataDatabase: DatabaseProvider {
 }
 
 extension CoreDataDatabase: Database {
-    public func fetch<T>(_ type: T.Type, for key: PrimaryKey) async throws -> T.ManagedObject? where T : Persistable {
+    public func fetch<T>(_ type: T.Type, for key: PrimaryKey?) async throws -> T.ManagedObject? where T : Persistable {
         guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(type.ManagedObject)
         }
@@ -115,8 +115,14 @@ extension CoreDataDatabase: Database {
             
             self.perform { moc in
                 do {
-                    let prdicate = NSPredicate(format: "\(key.key) == %@", "\(key.value)")
-                    let result = try moc.fetch(ObjectType.createFetchRequest(predicate: prdicate))
+                    
+                    var predicate: NSPredicate?
+                    
+                    if let key = key {
+                        predicate = NSPredicate(format: "\(key.key) == %@", "\(key.value)")
+                    }
+                    
+                    let result = try moc.fetch(ObjectType.createFetchRequest(predicate: predicate))
                     continuation.resume(with: .success(result.first as? T.ManagedObject))
                 } catch {
                     continuation.resume(with: .failure(error))
@@ -147,7 +153,7 @@ extension CoreDataDatabase: Database {
         }
     }
     
-    public func fetchOrCreate<T>(_ type: T.Type, for key: PrimaryKey) async throws -> T.ManagedObject where T : Persistable {
+    public func fetchOrCreate<T>(_ type: T.Type, for key: PrimaryKey?) async throws -> T.ManagedObject where T : Persistable {
         guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(type.ManagedObject)
         }
@@ -160,11 +166,19 @@ extension CoreDataDatabase: Database {
             
             self.perform { moc in
                 do {
-                    let prdicate = NSPredicate(format: "\(key.key) == %@", "\(key.value)")
-                    let result = try moc.fetch(ObjectType.createFetchRequest(predicate: prdicate))
+                    
+                    var predicate: NSPredicate?
+                    
+                    if let key = key {
+                        predicate = NSPredicate(format: "\(key.key) == %@", "\(key.value)")
+                    }
+                    
+                    let result = try moc.fetch(ObjectType.createFetchRequest(predicate: predicate))
                     if result.isEmpty {
                         let object = ObjectType.init(context: moc)
-                        object.setCustomValue(key.value, for: key.key)
+                        if let key = key {
+                            object.setCustomValue(key.value, for: key.key)
+                        }
                         moc.insert(object)
                         continuation.resume(with: .success(object as! T.ManagedObject))
                     } else {

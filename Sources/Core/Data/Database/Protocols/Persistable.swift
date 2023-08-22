@@ -7,8 +7,12 @@ import Foundation
 public protocol Persistable {
     associatedtype ManagedObject
     associatedtype Context
-    var primaryKey: PrimaryKey { get }
+    var primaryKey: PrimaryKey? { get }
     func update(_ object: ManagedObject, context: Context) throws
+}
+
+public extension Persistable {
+    var primaryKey: PrimaryKey? { nil }
 }
 
 public extension Persistable

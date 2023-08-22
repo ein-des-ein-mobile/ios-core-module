@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol DatabaseRepresentable: Identifiable {
+public protocol DatabaseRepresentable {
     associatedtype ManagedObject
     associatedtype Context
 
