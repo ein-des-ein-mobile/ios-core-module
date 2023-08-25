@@ -15,18 +15,18 @@ public protocol Storagable {
 }
 
 @propertyWrapper
-final class StoragaValue<T: Codable> {
+public final class StorageWrapper<T: Codable> {
     var defaultValue: T
     var key: String
     var storage: Storagable
 
-    init(key: String, defaultValue: T, storage: Storagable) {
+    public init(key: String, defaultValue: T, storage: Storagable) {
         self.key = key
         self.defaultValue = defaultValue
         self.storage = storage
     }
 
-    var wrappedValue: T {
+    public var wrappedValue: T {
         get { (try? storage.load(key: key)) ?? defaultValue }
         set { try? storage.save(newValue, key: key) }
     }
