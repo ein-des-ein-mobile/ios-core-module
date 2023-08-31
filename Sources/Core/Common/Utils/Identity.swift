@@ -31,3 +31,26 @@ public protocol Identity: Hashable, Codable {
     
     init(value: Value)
 }
+
+// MARK: - Basic Typed Identity
+
+public struct String_ID<T>: Equatable, Identity {
+    public let value: String
+    public init(value: String) {
+        self.value = value
+    }
+}
+
+public struct Int_ID<T>: Equatable, Identity {
+    public let value: Int
+    public init(value: Int) {
+        self.value = value
+    }
+}
+
+public struct UUID_ID<T>: Equatable, Identity {
+    public let value: UUID
+    public init(value: UUID) {
+        self.value = value
+    }
+}
