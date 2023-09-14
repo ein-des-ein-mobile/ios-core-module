@@ -27,7 +27,7 @@ public extension DatabaseProvider {
     
     func fetchOrCreate<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey,
+        for key: PrimaryKey?,
         context: T.Context
     ) async throws -> T {
         try await perform { database in
@@ -46,7 +46,7 @@ public extension DatabaseProvider {
     
     func fetch<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey,
+        for key: PrimaryKey?,
         context: T.Context
     ) async throws -> T? {
         try await perform { database in
@@ -68,7 +68,7 @@ public extension DatabaseProvider {
     
     func fetchOrCreateAndWait<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey,
+        for key: PrimaryKey?,
         context: T.Context
     ) throws -> T {
         try execute {
@@ -156,7 +156,7 @@ public extension DatabaseProvider {
     
     func fetchOrCreateAndWait<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey
+        for key: PrimaryKey?
     ) throws -> T
     where T.Context == Void
     {
@@ -171,7 +171,7 @@ public extension DatabaseProvider {
     
     func fetchOrCreate<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey
+        for key: PrimaryKey?
     ) async throws -> T
     where T.Context == Void
     {
