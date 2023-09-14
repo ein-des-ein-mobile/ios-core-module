@@ -11,20 +11,13 @@ public func execute<Success>(
     operation: @escaping @Sendable () async throws -> Success,
     callback: ((Result<Success, Error>) -> Void)? = nil
 ) {
-    
-    let semaphore = DispatchSemaphore(value: 0)
-    
-    Task {
-        defer { semaphore.signal() }
-        
+    Task { 
         do {
             callback?(.success(try await operation()))
         } catch {
             callback?(.failure(error))
         }
     }
-    
-    semaphore.wait()
 }
 
 public func execute<Success>(
