@@ -11,13 +11,15 @@ public func execute<Success>(
     operation: @escaping @Sendable () async throws -> Success,
     callback: ((Result<Success, Error>) -> Void)? = nil
 ) {
-    Task { 
-        do {
-            callback?(.success(try await operation()))
-        } catch {
-            callback?(.failure(error))
-        }
-    }
+   let value = UnsafeTask {
+       do {
+           return Result<Success, Error>.success(try await operation())
+       } catch {
+           return Result.failure(error)
+       }
+    }.get()
+    
+    callback?(value)
 }
 
 public func execute<Success>(
