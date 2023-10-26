@@ -39,14 +39,6 @@ public extension Database {
         }
     }
     
-    func createOrUpdate<T: Persistable>(from object: T, context: T.Context) async throws -> T.ManagedObject
-    {
-        let managedObject = try await fetchOrCreate(T.self, for: object.primaryKey)
-        try object.update(managedObject, context: context)
-        return managedObject
-    }
-    
-    
     func createOrUpdate<T: Persistable>(from objects: [T]) async throws
     -> [T.ManagedObject] where T.Context == Void
     {

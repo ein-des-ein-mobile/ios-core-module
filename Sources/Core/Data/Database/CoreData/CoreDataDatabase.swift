@@ -102,6 +102,52 @@ extension CoreDataDatabase: DatabaseProvider {
 }
 
 extension CoreDataDatabase: Database {
+    
+    public func createOrUpdate<T>(from object: T, context: T.Context) async throws -> T.ManagedObject where T : Persistable {
+        guard let ObjectType = T.ManagedObject.self as? NSManagedObject.Type else {
+            throw DatabaseError.typeCasting(T.ManagedObject.self)
+        }
+        
+        return try await withCheckedThrowingContinuation { [weak self] continuation in
+            guard let self = self else {
+                continuation.resume(with: .failure(DatabaseError.dealocated(CoreDataDatabase.self)))
+                return
+            }
+            
+            self.perform { moc in
+                do {
+                    var predicate: NSPredicate?
+                    
+                    if let key = object.primaryKey {
+                        predicate = NSPredicate(format: "\(key.key) == %@", "\(key.value)")
+                    }
+                
+                    let result = try moc.fetch(ObjectType.createFetchRequest(predicate: predicate))
+                    
+                    if result.isEmpty {
+                        let newObject = ObjectType.init(context: moc)
+                        
+                        if let key = object.primaryKey {
+                            newObject.setCustomValue(key.value, for: key.key)
+                        }
+                        
+                        moc.insert(newObject)
+                        
+                        let value = newObject as! T.ManagedObject
+                        try object.update(value, context: context)
+                        continuation.resume(with: .success(value))
+                    } else {
+                        let newObject = result.first! as! T.ManagedObject
+                        try object.update(newObject, context: context)
+                        continuation.resume(with: .success(newObject))
+                    }
+                } catch {
+                    continuation.resume(with: .failure(error))
+                }
+            }
+        }
+    }
+    
     public func fetch<T>(_ type: T.Type, for key: PrimaryKey?) async throws -> T.ManagedObject? where T : Persistable {
         guard let ObjectType = type.ManagedObject as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(type.ManagedObject)
