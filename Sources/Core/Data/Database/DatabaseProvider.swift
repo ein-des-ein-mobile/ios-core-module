@@ -21,7 +21,7 @@ public extension DatabaseProvider {
 
     func persist<T: Persistable>(_ value: T, context: T.Context) async throws -> T.ManagedObject {
         try await perform { database in
-            try await database.createOrUpdate(from: value, context: context)
+            try await database.save(from: value, context: context)
         }
     }
     
@@ -114,7 +114,7 @@ public extension DatabaseProvider {
                                            context: T.Item.Context) async throws -> [T.Item.ManagedObject]
     {
         try await perform { database in
-            try await database.createOrUpdate(from: values.items, context: context)
+            try await database.save(from: values.items, context: context)
         }
     }
 }

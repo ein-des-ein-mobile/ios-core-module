@@ -103,7 +103,7 @@ extension CoreDataDatabase: DatabaseProvider {
 
 extension CoreDataDatabase: Database {
     
-    public func createOrUpdate<T>(from object: T, context: T.Context) async throws -> T.ManagedObject where T : Persistable {
+    public func save<T>(from object: T, context: T.Context) async throws -> T.ManagedObject where T : Persistable {
         guard let ObjectType = T.ManagedObject.self as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(T.ManagedObject.self)
         }
