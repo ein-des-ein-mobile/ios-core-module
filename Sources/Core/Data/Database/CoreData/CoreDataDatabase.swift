@@ -102,8 +102,10 @@ extension CoreDataDatabase: DatabaseProvider {
 }
 
 extension CoreDataDatabase: Database {
+
+    public typealias Context = NSManagedObjectContext
     
-    public func save<T>(from object: T, context: T.Context) async throws -> T.ManagedObject where T : Persistable {
+    public func save<T>(from object: T) async throws -> T.ManagedObject where T: Persistable {
         guard let ObjectType = T.ManagedObject.self as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(T.ManagedObject.self)
         }
@@ -127,18 +129,32 @@ extension CoreDataDatabase: Database {
                     if result.isEmpty {
                         let newObject = ObjectType.init(context: moc)
                         
+                        print(object.primaryKey)
+                        
                         if let key = object.primaryKey {
-                            newObject.setCustomValue(key.value, for: key.key)
+                            newObject.setPrimaryKey(key)
                         }
                         
                         moc.insert(newObject)
                         
                         let value = newObject as! T.ManagedObject
-                        try object.update(value, context: context)
+                        
+                        if let c = moc as? T.Context {
+                            try object.update(value, context: c)
+                        } else if let c = () as? T.Context {
+                            try object.update(value, context: c)
+                        }
+                        
                         continuation.resume(with: .success(value))
                     } else {
                         let newObject = result.first! as! T.ManagedObject
-                        try object.update(newObject, context: context)
+                        
+                        if let c = moc as? T.Context {
+                            try object.update(newObject, context: c)
+                        } else if let c = () as? T.Context {
+                            try object.update(newObject, context: c)
+                        }
+                        
                         continuation.resume(with: .success(newObject))
                     }
                 } catch {
@@ -223,7 +239,7 @@ extension CoreDataDatabase: Database {
                     if result.isEmpty {
                         let object = ObjectType.init(context: moc)
                         if let key = key {
-                            object.setCustomValue(key.value, for: key.key)
+                            object.setPrimaryKey(key)
                         }
                         moc.insert(object)
                         continuation.resume(with: .success(object as! T.ManagedObject))
@@ -235,5 +251,32 @@ extension CoreDataDatabase: Database {
                 }
             }
         }
+    }
+}
+
+public extension Persistable {
+    func createOrUpdate(context: NSManagedObjectContext) throws -> ManagedObject
+    where
+    Context == NSManagedObjectContext,
+    ManagedObject: NSManagedObject
+    {
+        var predicate: NSPredicate?
+        
+        if let key = primaryKey {
+            predicate = NSPredicate(format: "\(key.key) == %@", "\(key.value)")
+        }
+        
+        let request = ManagedObject.createFetchRequest(predicate: predicate)
+        
+        let result = try context.fetch(request)
+        let object = result.first ?? ManagedObject.init(context: context)
+        
+        if let key = primaryKey {
+            object.setPrimaryKey(key)
+        }
+        
+        try update(object as! Self.ManagedObject, context: context)
+        
+        return object as! Self.ManagedObject
     }
 }

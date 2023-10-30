@@ -19,38 +19,36 @@ public protocol DatabaseProvider {
 
 public extension DatabaseProvider {
 
-    func persist<T: Persistable>(_ value: T, context: T.Context) async throws -> T.ManagedObject {
+    @discardableResult
+    func persist<T: Persistable>(_ value: T) async throws -> T.ManagedObject {
         try await perform { database in
-            try await database.save(from: value, context: context)
+            try await database.save(from: value)
         }
     }
     
     func fetchOrCreate<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey?,
-        context: T.Context
+        for key: PrimaryKey?
     ) async throws -> T {
         try await perform { database in
-            try T(await database.fetchOrCreate(type, for: key), context: context)
+            try T(await database.fetchOrCreate(type, for: key))
         }
     }
     
     func fetch<T: Persistable & DatabaseRepresentable>(
-        _ type: T.Type,
-        context: T.Context
+        _ type: T.Type
     ) async throws -> [T] {
         try await perform { database in
-            try await database.fetch(type).map { try T($0, context: context) }
+            try await database.fetch(type).map { try T($0) }
         }
     }
     
     func fetch<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey?,
-        context: T.Context
+        for key: PrimaryKey?
     ) async throws -> T? {
         try await perform { database in
-            try await database.fetch(type, for: key).map { try T($0, context: context) }
+            try await database.fetch(type, for: key).map { try T($0) }
         }
     }
 }
@@ -58,40 +56,36 @@ public extension DatabaseProvider {
 public extension DatabaseProvider {
     func persistAndWait<T: Persistable>(
         _ value: T,
-        context: T.Context,
         callback: ((Result<T.ManagedObject, Error>) -> Void)? = nil
     ) {
         execute(operation: {
-            try await persist(value, context: context)
+            try await persist(value)
         }, callback: callback)
     }
     
     func fetchOrCreateAndWait<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey?,
-        context: T.Context
+        for key: PrimaryKey?
     ) throws -> T {
         try execute {
-            try await fetchOrCreate(type, for: key, context: context)
+            try await fetchOrCreate(type, for: key)
         }
     }
     
     func fetchAndWait<T: Persistable & DatabaseRepresentable>(
-        _ type: T.Type,
-        context: T.Context
+        _ type: T.Type
     ) throws -> [T] {
         try execute {
-            try await fetch(type, context: context)
+            try await fetch(type)
         }
     }
     
-    func fetcAndhWait<T: Persistable & DatabaseRepresentable>(
+    func fetchAndhWait<T: Persistable & DatabaseRepresentable>(
         _ type: T.Type,
-        for key: PrimaryKey,
-        context: T.Context
+        for key: PrimaryKey
     ) throws -> T? {
         try execute {
-            try await fetch(type, for: key, context: context)
+            try await fetch(type, for: key)
         }
     }
     
@@ -110,86 +104,10 @@ public extension DatabaseProvider {
 
 public extension DatabaseProvider {
 
-    func persist<T: PersistableCollection>(_ values: T,
-                                           context: T.Item.Context) async throws -> [T.Item.ManagedObject]
-    {
-        try await perform { database in
-            try await database.save(from: values.items, context: context)
-        }
-    }
-}
-
-
-// MARK: - where Context == Void
-
-public extension DatabaseProvider {
     func persist<T: PersistableCollection>(_ values: T) async throws -> [T.Item.ManagedObject]
-    where T.Item.Context == Void
-    {
-        try await persist(values, context: ())
-    }
-    
-    func fetchAndWait<T: Persistable & DatabaseRepresentable>( _ type: T.Type) throws -> [T]
-    where T.Context == Void
-    {
-        try fetchAndWait(type, context: ())
-    }
-    
-    func fetcAndhWait<T: Persistable & DatabaseRepresentable>(
-        _ type: T.Type,
-        for key: PrimaryKey
-    ) throws -> T?
-    where T.Context == Void
-    {
-        try execute {
-            try await fetch(type, for: key, context: ())
+   {
+        try await perform { database in
+            try await database.save(from: values.items)
         }
-    }
-    
-    func persistAndWait<T: Persistable>(
-        _ value: T,
-        callback: ((Result<T.ManagedObject, Error>) -> Void)? = nil
-    ) where T.Context == Void
-    {
-       persistAndWait(value, context: (), callback: callback)
-    }
-    
-    func fetchOrCreateAndWait<T: Persistable & DatabaseRepresentable>(
-        _ type: T.Type,
-        for key: PrimaryKey?
-    ) throws -> T
-    where T.Context == Void
-    {
-        try fetchOrCreateAndWait(type, for: key, context: ())
-    }
-    
-    func persist<T: Persistable>(_ value: T) async throws -> T.ManagedObject
-    where T.Context == Void
-    {
-        try await persist(value, context: ())
-    }
-    
-    func fetchOrCreate<T: Persistable & DatabaseRepresentable>(
-        _ type: T.Type,
-        for key: PrimaryKey?
-    ) async throws -> T
-    where T.Context == Void
-    {
-        try await fetchOrCreate(type, for: key, context: ())
-    }
-    
-    func fetch<T: Persistable & DatabaseRepresentable>(_ type: T.Type) async throws -> [T]
-    where T.Context == Void
-    {
-        try await fetch(type, context: ())
-    }
-    
-    func fetch<T: Persistable & DatabaseRepresentable>(
-        _ type: T.Type,
-        for key: PrimaryKey
-    ) async throws -> T?
-    where T.Context == Void
-    {
-        try await fetch(type, for: key, context: ())
     }
 }

@@ -17,35 +17,26 @@ public enum DatabaseError: LocalizedError {
 
 public protocol Database {
 
-    func save<T: Persistable>(from object: T, context: T.Context) async throws -> T.ManagedObject
+    func save<T: Persistable>(from object: T) async throws -> T.ManagedObject
 
     func fetchOrCreate<T: Persistable>(_ type: T.Type, for key: PrimaryKey?) async throws -> T.ManagedObject
     func fetch<T: Persistable>(_ type: T.Type) async throws -> [T.ManagedObject]
     func fetch<T: Persistable>(_ type: T.Type, for key: PrimaryKey?) async throws -> T.ManagedObject?
 }
 
-
 public extension Database {
-    func save<T: Persistable>(from objects: [T], context: T.Context) async throws
-    -> [T.ManagedObject]
-    {
+    func save<T: Persistable>(from objects: [T]) async throws -> [T.ManagedObject]  {
         try await withThrowingTaskGroup(of: T.ManagedObject.self) { group in
             for object in objects {
-                group.addTask { try await save(from: object, context: context) }
+                group.addTask { try await save(from: object) }
             }
             
             return try await group.reduce(into: [T.ManagedObject]()) { $0.append($1) }
         }
     }
     
-    func save<T: Persistable>(from objects: [T]) async throws
-    -> [T.ManagedObject] where T.Context == Void
+    func save<T: Persistable>(from object: T) async throws -> T.ManagedObject 
     {
-        try await save(from: objects, context: ())
-    }
-    
-    func save<T: Persistable>(from object: T) async throws -> T.ManagedObject where T.Context == Void
-    {
-        try await save(from: object, context: ())
+        try await save(from: object)
     }
 }

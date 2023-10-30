@@ -10,54 +10,18 @@ import CoreData
 public extension Persistable {
     func persist<D>(to database: D) async throws -> ManagedObject
     where D: DatabaseProvider,
-          ManagedObject: NSManagedObject,
-          Context == Void {
-              try await database.persist(self)
-          }
+          ManagedObject: NSManagedObject
+    {
+        try await database.persist(self)
+    }
     
 }
 
 public extension PersistableCollection {
     func persist<D>(to database: D) async throws -> [Item.ManagedObject]
     where D: DatabaseProvider,
-          Item.ManagedObject: NSManagedObject,
-          Item.Context == Void
+          Item.ManagedObject: NSManagedObject
     {
         try await database.persist(self)
     }
 }
-
-public extension NSManagedObject {
-    func tryMap<T, D>(to type: T.Type, database: D) async throws -> T?
-    where D: DatabaseProvider,
-          T: DatabaseRepresentable,
-          T.ManagedObject: NSManagedObject,
-          T.Context == Void
-    {
-        try await database.perform { [unowned self] _ -> T? in
-            guard !self.isFault else {
-                return nil
-            }
-            return try T(self as! T.ManagedObject)
-        }
-    }
-}
-
-public extension Array where Element: NSManagedObject {
-    func tryMap<T, D>(to type: T.Type, database: D) async throws -> [T]
-    where D: DatabaseProvider,
-          T: DatabaseRepresentable,
-          T.ManagedObject: NSManagedObject,
-          T.Context == Void
-    {
-        try await database.perform { _ -> [T] in
-            try self.compactMap {
-                guard !$0.isFault else {
-                    return nil
-                }
-                return try T($0 as! T.ManagedObject)
-            }
-        }
-    }
-}
-

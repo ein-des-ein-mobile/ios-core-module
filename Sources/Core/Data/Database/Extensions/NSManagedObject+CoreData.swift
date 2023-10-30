@@ -39,5 +39,8 @@ public extension NSManagedObject {
         
         return primitiveValue(forKey: key)
     }
+    
+    func setPrimaryKey(_ key: PrimaryKey) {
+        setCustomValue(key.value, for: key.key)
+    }
 }
-
