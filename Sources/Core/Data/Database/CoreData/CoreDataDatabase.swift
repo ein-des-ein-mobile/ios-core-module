@@ -59,7 +59,7 @@ public final class CoreDataDatabase {
         description.shouldMigrateStoreAutomatically = true
         description.shouldInferMappingModelAutomatically = true
         persistentContainer.persistentStoreDescriptions = [description]
-        
+
         persistentContainer.loadPersistentStores { _, error in
             completion(error)
         }
