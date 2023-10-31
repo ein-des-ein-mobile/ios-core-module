@@ -55,6 +55,11 @@ public final class CoreDataDatabase {
     // MARK: - Functions
     
     public func load(_ completion: @escaping (Error?) -> Void) {
+        let description = NSPersistentStoreDescription()
+        description.shouldMigrateStoreAutomatically = true
+        description.shouldInferMappingModelAutomatically = true
+        persistentContainer.persistentStoreDescriptions = [description]
+        
         persistentContainer.loadPersistentStores { _, error in
             completion(error)
         }
