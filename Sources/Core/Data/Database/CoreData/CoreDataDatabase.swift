@@ -17,9 +17,30 @@ import CoreData
 
 public final class CoreDataDatabase {
     
+    public enum DatabaseType: String {
+        case sqlite
+    }
+    
+    private var storeURL: URL? {
+        try? FileManager
+            .default
+            .url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent("\(persistentContainerName).\(type.rawValue)")
+    }
+    
     // MARK: - Properties
     
-    private lazy var persistentContainer = NSPersistentContainer(name: persistentContainerName)
+    private lazy var persistentContainer: NSPersistentContainer = {
+        let container = NSPersistentContainer(name: persistentContainerName)
+
+        if let url = storeURL {
+            let description = NSPersistentStoreDescription(url: url)
+            description.shouldMigrateStoreAutomatically = true
+            container.persistentStoreDescriptions = [description]
+        }
+        
+        return container
+    }()
     
     private lazy var viewContext: NSManagedObjectContext = {
         with(persistentContainer.viewContext) {
@@ -37,15 +58,18 @@ public final class CoreDataDatabase {
     
     let persistentContainerName: String
     let logger: CoreLogging
+    let type: DatabaseType
     
     // MARK: - Initialization
     
     public init(
         persistentContainerName: String,
-        logger: CoreLogging = CoreLogger(category: "Core-Data")
+        logger: CoreLogging = CoreLogger(category: "Core-Data"),
+        type: DatabaseType = .sqlite
     ) {
         self.persistentContainerName = persistentContainerName
         self.logger = logger
+        self.type = type
         // loading is synchronius
         load { error in
             error.map { logger.error("Database load error", $0)}
@@ -55,7 +79,8 @@ public final class CoreDataDatabase {
     // MARK: - Functions
     
     public func load(_ completion: @escaping (Error?) -> Void) {
-        persistentContainer.loadPersistentStores { _, error in
+        persistentContainer.loadPersistentStores { [weak self] value, error in
+            self?.logger.log(value.debugDescription)
             completion(error)
         }
     }
@@ -128,9 +153,7 @@ extension CoreDataDatabase: Database {
                     
                     if result.isEmpty {
                         let newObject = ObjectType.init(context: moc)
-                        
-                        print(object.primaryKey)
-                        
+                                                
                         if let key = object.primaryKey {
                             newObject.setPrimaryKey(key)
                         }
