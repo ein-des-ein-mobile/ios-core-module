@@ -16,27 +16,41 @@ public enum DatabaseError: LocalizedError {
 }
 
 public protocol Database {
+    
+    associatedtype Context
 
-    func save<T: Persistable>(from object: T) async throws -> T.ManagedObject
+    func save<T: Persistable>(from object: T, context: Context) throws -> T.ManagedObject
 
-    func fetchOrCreate<T: Persistable>(_ type: T.Type, for key: PrimaryKey?) async throws -> T.ManagedObject
-    func fetch<T: Persistable>(_ type: T.Type) async throws -> [T.ManagedObject]
-    func fetch<T: Persistable>(_ type: T.Type, for key: PrimaryKey?) async throws -> T.ManagedObject?
+    func fetch<T: Persistable>(
+        _ type: T.Type,
+        predicate: NSPredicate?,
+        sortDescriptors: [NSSortDescriptor]?,
+        context: Context
+    ) throws -> [T.ManagedObject]
 }
 
 public extension Database {
-    func save<T: Persistable>(from objects: [T]) async throws -> [T.ManagedObject]  {
-        try await withThrowingTaskGroup(of: T.ManagedObject.self) { group in
-            for object in objects {
-                group.addTask { try await save(from: object) }
-            }
-            
-            return try await group.reduce(into: [T.ManagedObject]()) { $0.append($1) }
-        }
+    func fetch<T: Persistable>(
+        _ type: T.Type,
+        predicate: NSPredicate?,
+        context: Context
+    ) throws -> [T.ManagedObject] {
+        try fetch(type, predicate: predicate, sortDescriptors: nil, context: context)
     }
     
-    func save<T: Persistable>(from object: T) async throws -> T.ManagedObject 
-    {
-        try await save(from: object)
+    func fetch<T: Persistable>(_ type: T.Type, context: Context) throws -> [T.ManagedObject] {
+        try fetch(type, predicate: nil, sortDescriptors: nil, context: context)
+    }
+    
+    func save<T: Persistable>(from objects: [T], context: Context) throws -> [T.ManagedObject] {
+        try objects.compactMap { try save(from: $0, context: context) }
+    }
+    
+    func save<T: Persistable>(from object: T, context: Context) throws -> T.ManagedObject {
+        try save(from: object, context: context)
+    }
+    
+    func fetchLast<T: Persistable>(_ type: T.Type, for key: PrimaryKey?, context: Context) throws -> T.ManagedObject? {
+        try fetch(type, predicate: key?.toPredicate(), context: context).last
     }
 }
