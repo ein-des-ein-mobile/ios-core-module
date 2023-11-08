@@ -48,6 +48,13 @@ public struct Int_ID<T>: Equatable, Identity {
     }
 }
 
+public struct Int64_ID<T>: Equatable, Identity {
+    public let value: Int64
+    public init(value: Int64) {
+        self.value = value
+    }
+}
+
 public struct UUID_ID<T>: Equatable, Identity {
     public let value: UUID
     public init(value: UUID) {

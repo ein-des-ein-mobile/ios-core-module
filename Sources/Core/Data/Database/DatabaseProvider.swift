@@ -46,13 +46,10 @@ public extension DatabaseProvider {
 }
 
 public extension DatabaseProvider {
-    func persistAndWait<T: Persistable>(
-        _ value: T,
-        callback: ((Result<T.ManagedObject, Error>) -> Void)? = nil
-    ) {
-        execute(operation: {
-            try await persist(value)
-        }, callback: callback)
+    
+    @discardableResult
+    func persistAndWait<T: Persistable>(_ value: T) throws -> T.ManagedObject {
+        try execute { try await persist(value) }
     }
     
     func fetchAndWait<T: Persistable & DatabaseRepresentable>(
