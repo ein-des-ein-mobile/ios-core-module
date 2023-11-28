@@ -12,7 +12,7 @@ public protocol DatabaseProvider {
     
     func perform<Output>(_ action: @escaping (DB, DB.Context) throws -> Output) async throws -> Output
     
-    func erase() async throws
+    func erase() throws
 }
 
 // MARK: - Persistable

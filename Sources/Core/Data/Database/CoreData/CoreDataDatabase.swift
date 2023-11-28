@@ -22,10 +22,7 @@ public final class CoreDataDatabase {
     }
     
     private var storeURL: URL? {
-        try? FileManager
-            .default
-            .url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-            .appendingPathComponent("\(persistentContainerName).\(type.rawValue)")
+        try? unownedURL()
     }
     
     // MARK: - Properties
@@ -83,12 +80,10 @@ public final class CoreDataDatabase {
             error.map { logger.error("Database load error", $0)}
             
             if error != nil {
-                if let url = self?.storeURL {
-                    try? FileManager.default.removeItem(at: url)
-                    
-                    self?.load { error in
-                        error.map { logger.error("Database load error", $0)}
-                    }
+                try? self?.erase()
+                
+                self?.load { error in
+                    error.map { logger.error("Database load error", $0)}
                 }
             }
         }
@@ -103,6 +98,13 @@ public final class CoreDataDatabase {
         }
     }
     
+    private func unownedURL() throws -> URL {
+        try FileManager
+            .default
+            .url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent("\(persistentContainerName).\(type.rawValue)")
+    }
+
     // MARK: Perform
     
     public func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
@@ -139,8 +141,8 @@ extension CoreDataDatabase: DatabaseProvider {
         }
     }
     
-    public func erase() async throws {
-
+    public func erase() throws {
+        try FileManager.default.removeItem(at: unownedURL())
     }
 }
 
