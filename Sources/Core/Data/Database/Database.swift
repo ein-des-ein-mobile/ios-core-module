@@ -19,8 +19,9 @@ public protocol Database {
     
     associatedtype Context
 
-    func save<T: Persistable>(from object: T, context: Context) throws -> T.ManagedObject
-
+    func save<T: Persistable>(_ object: T, context: Context) throws -> T.ManagedObject
+    func delete<T: Persistable>(_ object: T, context: Context) throws -> T.ManagedObject?
+    
     func fetch<T: Persistable>(
         _ type: T.Type,
         predicate: NSPredicate?,
@@ -30,27 +31,27 @@ public protocol Database {
 }
 
 public extension Database {
-    func fetch<T: Persistable>(
-        _ type: T.Type,
-        predicate: NSPredicate?,
-        context: Context
-    ) throws -> [T.ManagedObject] {
-        try fetch(type, predicate: predicate, sortDescriptors: nil, context: context)
-    }
-    
     func fetch<T: Persistable>(_ type: T.Type, context: Context) throws -> [T.ManagedObject] {
         try fetch(type, predicate: nil, sortDescriptors: nil, context: context)
     }
     
-    func save<T: Persistable>(from objects: [T], context: Context) throws -> [T.ManagedObject] {
-        try objects.compactMap { try save(from: $0, context: context) }
+    func fetch<T: Persistable>(_ type: T.Type, sortDescriptors: [NSSortDescriptor]?, context: Context) throws -> [T.ManagedObject] {
+        try fetch(type, predicate: nil, sortDescriptors: sortDescriptors, context: context)
     }
     
-    func save<T: Persistable>(from object: T, context: Context) throws -> T.ManagedObject {
-        try save(from: object, context: context)
+    func fetch<T: Persistable>(_ type: T.Type, predicate: NSPredicate?, context: Context) throws -> [T.ManagedObject] {
+        try fetch(type, predicate: predicate, sortDescriptors: nil, context: context)
+    }
+    
+    func save<T: Persistable>(_ objects: [T], context: Context) throws -> [T.ManagedObject] {
+        try objects.compactMap { try save($0, context: context) }
+    }
+    
+    func delete<T: Persistable>(_ objects: [T], context: Context) throws -> [T.ManagedObject] {
+        try objects.compactMap { try delete($0, context: context) }
     }
     
     func fetchLast<T: Persistable>(_ type: T.Type, for key: PrimaryKey?, context: Context) throws -> T.ManagedObject? {
-        try fetch(type, predicate: key?.toPredicate(), context: context).last
+        try fetch(type, predicate: key?.toPredicate(), sortDescriptors: nil, context: context).last
     }
 }

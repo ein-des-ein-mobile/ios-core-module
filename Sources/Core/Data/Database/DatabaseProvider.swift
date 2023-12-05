@@ -23,7 +23,15 @@ public extension DatabaseProvider {
     func persist<T: Persistable>(_ value: T) async throws -> T.ManagedObject 
     {
         try await perform { (database, context) in
-            try database.save(from: value, context: context)
+            try database.save(value, context: context)
+        }
+    }
+    
+    @discardableResult
+    func delete<T: Persistable>(_ value: T) async throws -> T.ManagedObject?
+    {
+        try await perform { (database, context) in
+            try database.delete(value, context: context)
         }
     }
 
@@ -32,6 +40,16 @@ public extension DatabaseProvider {
     ) async throws -> [T] {
         try await perform { (database, context) in
             try database.fetch(type, context: context).map { try T($0) }
+        }
+    }
+    
+    func fetch<T: Persistable & DatabaseRepresentable>(
+        _ type: T.Type,
+        sortDescriptors: [NSSortDescriptor]?
+    ) async throws -> [T] {
+        try await perform { (database, context) in
+            try database.fetch(type, predicate: nil, sortDescriptors: sortDescriptors, context: context)
+                .map { try T($0) }
         }
     }
     
@@ -87,7 +105,7 @@ public extension DatabaseProvider {
     func persist<T: PersistableCollection>(_ values: T) async throws -> [T.Item.ManagedObject]
    {
         try await perform { (database, context) in
-            try database.save(from: values.items, context: context)
+            try database.save(values.items, context: context)
         }
     }
 }

@@ -169,7 +169,21 @@ extension CoreDataDatabase: Database {
         return result as! [T.ManagedObject]
     }
     
-    public func save<T>(from object: T, context: Context) throws -> T.ManagedObject where T: Persistable {
+    public func delete<T: Persistable>(_ object: T, context: Context) throws -> T.ManagedObject? {
+        guard let ObjectType = T.ManagedObject.self as? NSManagedObject.Type else {
+            throw DatabaseError.typeCasting(T.ManagedObject.self)
+        }
+        
+        let result = try context.fetch(ObjectType.createFetchRequest(predicate: object.primaryKey?.toPredicate()))
+        
+        if let object = result.first {
+            context.delete(object)
+        }
+        
+        return result.first as? T.ManagedObject
+    }
+    
+    public func save<T: Persistable>(_ object: T, context: Context) throws -> T.ManagedObject {
         
         guard let ObjectType = T.ManagedObject.self as? NSManagedObject.Type else {
             throw DatabaseError.typeCasting(T.ManagedObject.self)
