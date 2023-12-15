@@ -11,8 +11,6 @@ public protocol DatabaseProvider {
     associatedtype DB: Database
     
     func perform<Output>(_ action: @escaping (DB, DB.Context) throws -> Output) async throws -> Output
-    
-    func erase() throws
 }
 
 // MARK: - Persistable

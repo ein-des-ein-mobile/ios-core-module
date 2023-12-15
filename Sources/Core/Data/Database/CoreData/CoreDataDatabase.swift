@@ -27,18 +27,8 @@ public final class CoreDataDatabase {
     
     // MARK: - Properties
     
-    private lazy var persistentContainer: NSPersistentContainer = {
-        let container = NSPersistentContainer(name: persistentContainerName)
-        
-        if let url = storeURL {
-            let description = NSPersistentStoreDescription(url: url)
-            description.shouldMigrateStoreAutomatically = true
-            container.persistentStoreDescriptions = [description]
-        }
-        
-        return container
-    }()
-    
+    private lazy var persistentContainer: NSPersistentContainer = newPersistentContainer()
+
     var managedObjectContext: NSManagedObjectContext {
         if Thread.isMainThread {
             return viewContext
@@ -47,12 +37,12 @@ public final class CoreDataDatabase {
         }
     }
     
-    private lazy var viewContext: NSManagedObjectContext = {
+    private var viewContext: NSManagedObjectContext {
         with(persistentContainer.viewContext) {
             $0.automaticallyMergesChangesFromParent = true
             $0.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
         }
-    }()
+    }
     
     private var backgroundContext: NSManagedObjectContext {
         with(persistentContainer.newBackgroundContext()) {
@@ -107,7 +97,7 @@ public final class CoreDataDatabase {
 
     // MARK: Perform
     
-    public func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
+    func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
         let context = managedObjectContext
         
         context.performAndWait {
@@ -121,6 +111,23 @@ public final class CoreDataDatabase {
                 logger.error("Database perform error", error)
             }
         }
+    }
+    
+    func erase() throws {
+        try FileManager.default.removeItem(at: unownedURL())
+        persistentContainer = newPersistentContainer()
+    }
+    
+    func newPersistentContainer() -> NSPersistentContainer {
+        let container = NSPersistentContainer(name: persistentContainerName)
+        
+        if let url = storeURL {
+            let description = NSPersistentStoreDescription(url: url)
+            description.shouldMigrateStoreAutomatically = true
+            container.persistentStoreDescriptions = [description]
+        }
+        
+        return container
     }
 }
 
@@ -139,10 +146,6 @@ extension CoreDataDatabase: DatabaseProvider {
                 continuation.resume(returning: try action(self, moc))
             }
         }
-    }
-    
-    public func erase() throws {
-        try FileManager.default.removeItem(at: unownedURL())
     }
 }
 
