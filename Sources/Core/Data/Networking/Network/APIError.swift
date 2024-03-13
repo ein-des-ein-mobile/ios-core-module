@@ -35,9 +35,9 @@ public enum APIError: LocalizedError {
             return """
             Status code was \(int),
             ===================================
-            \(String(describing: response.url))
+            \(response.url?.lastPathComponent ?? "")
             ===================================
-            \(String(describing: String(data: data, encoding: .utf8)))
+            \(String(data: data, encoding: .utf8) ?? "")
             """
         case .sessionRequired:
             return "The session is required"
