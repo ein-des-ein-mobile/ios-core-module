@@ -7,15 +7,15 @@
 
 import Foundation
 
-final class ISO8601DateCoder: DateCoder {
-    override class var formatter: CustomDateFormatter? {
+public final class ISO8601DateCoder: DateCoder {
+    public override class var formatter: CustomDateFormatter? {
         DateFormatter.iso8601
     }
 }
 
 
-final class ISO8601LocalCoder: DateCoder {
-    override class var formatter: CustomDateFormatter? {
+public final class ISO8601LocalCoder: DateCoder {
+    public override class var formatter: CustomDateFormatter? {
         DateFormatter.iso8601Local
     }
 }
