@@ -25,9 +25,27 @@ public final class StorageWrapper<T: Codable> {
         self.defaultValue = defaultValue
         self.storage = storage
     }
+    
+    public convenience init(_ type: StorageWrapperType, key: String, defaultValue: T) {
+        self.init(key: key, defaultValue: defaultValue, storage: type.storage)
+    }
 
     public var wrappedValue: T {
         get { (try? storage.load(key: key)) ?? defaultValue }
         set { try? storage.save(newValue, key: key) }
+    }
+}
+
+public enum StorageWrapperType {
+    case keychain
+    case defaults
+    
+    var storage: Storagable {
+        switch self {
+        case .keychain:
+            KeychainStorage.shared
+        case .defaults:
+            DefaultsStorage.shared
+        }
     }
 }

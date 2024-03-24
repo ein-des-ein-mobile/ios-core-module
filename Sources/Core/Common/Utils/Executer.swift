@@ -12,11 +12,7 @@ public func execute<Success>(
     callback: ((Result<Success, Error>) -> Void)? = nil
 ) {
    let value = UnsafeTask {
-       do {
-           return Result<Success, Error>.success(try await operation())
-       } catch {
-           return Result.failure(error)
-       }
+       try await operation()
     }.get()
     
     callback?(value)
@@ -25,22 +21,33 @@ public func execute<Success>(
 public func execute<Success>(
     operation: @escaping @Sendable () async throws -> Success
 ) throws -> Success {
-    UnsafeTask {
+    let result = UnsafeTask {
         try await operation()
-    }.get()
+     }.get()
+    
+    switch result {
+    case .success(let success):
+        return success
+    case .failure(let failure):
+        throw failure
+    }
 }
 
 class UnsafeTask<T> {
     let semaphore = DispatchSemaphore(value: 0)
-    private var result: T?
+    private var result: Result<T, Error>?
     init(block: @escaping () async throws -> T) {
         Task {
-            result = try await block()
+            do {
+                result = Result<T, Error>.success(try await block())
+            } catch {
+                result = Result.failure(error)
+            }
             semaphore.signal()
         }
     }
 
-    func get() -> T {
+    func get() -> Result<T, Error> {
         if let result = result { return result }
         semaphore.wait()
         return result!

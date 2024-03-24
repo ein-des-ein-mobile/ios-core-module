@@ -97,18 +97,45 @@ public final class CoreDataDatabase {
 
     // MARK: Perform
     
-    func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) {
+    func perform(_ block: @escaping (NSManagedObjectContext) throws -> Void) throws {
         let context = managedObjectContext
         
-        context.performAndWait {
-            do {
+        if #available(iOS 15.0, *) {
+        return try context.performAndWait {
                 try block(context)
                 
                 if context.hasChanges {
                     try context.save()
                 }
-            } catch {
-                logger.error("Database perform error", error)
+            }
+        } else {
+            var result: Result<Void, Error>?
+            
+            context.performAndWait {
+                do {
+                    try block(context)
+                    
+                    if context.hasChanges {
+                        try context.save()
+                    }
+                    result = .success(())
+                } catch {
+                    result = .failure(error)
+                }
+            }
+            
+            guard let result = result else {
+                let error = NSError(domain: "Database perform error. Result is null", code: -99)
+                logger.error("Database perform error. Result is null", error)
+                throw error
+            }
+            
+            switch result {
+            case .success(let success):
+                return success
+            case .failure(let failure):
+                logger.error("Database perform error", failure)
+                throw failure
             }
         }
     }
@@ -142,8 +169,12 @@ extension CoreDataDatabase: DatabaseProvider {
                 return
             }
             
-            self.perform { moc in
-                continuation.resume(returning: try action(self, moc))
+            do {
+                try self.perform { moc in
+                     continuation.resume(returning: try action(self, moc))
+                 }
+            } catch {
+                continuation.resume(with: .failure(error))
             }
         }
     }

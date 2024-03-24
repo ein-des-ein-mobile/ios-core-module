@@ -11,6 +11,8 @@ import KeychainAccess
 public final class KeychainStorage {
     let keychain = Keychain().synchronizable(false)
     
+    public static let shared = KeychainStorage()
+    
     public init() {}
 }
 

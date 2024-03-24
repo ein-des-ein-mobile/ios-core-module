@@ -11,6 +11,8 @@ import Foundation
 public final class DefaultsStorage: Storagable {
     
     public init() {}
+    
+    public static let shared = DefaultsStorage()
 
     public func save<T>(_ object: T, key: String) throws where T: Encodable {
         let data = try JSONEncoder().encode(object)
